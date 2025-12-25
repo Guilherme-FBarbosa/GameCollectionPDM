@@ -1,0 +1,31 @@
+<resources>
+    <string name="app_name">ProjetoPDM</string>
+    <string name="add_game">Adicionar Jogo</string>
+
+    <string-array name="platforms">
+        <item>PlayStation 5</item>
+        <item>PlayStation 4</item>
+        <item>Xbox Series X/S</item>
+        <item>Xbox One</item>
+        <item>Nintendo Switch</item>
+        <item>PC</item>
+        <item>Mobile</item>
+        <item>Outro</item>
+    </string-array>
+
+    <string-array name="status_options">
+        <item>Por Jogar</item>
+        <item>A Jogar</item>
+        <item>Concluído</item>
+        <item>Abandonado</item>
+        <item>Emprestado</item>
+    </string-array>
+
+    <!-- Strings para GameDetailsActivity -->
+    <string name="detail_title_placeholder">Título do Jogo</string>
+    <string name="label_platform">Plataforma: %1$s</string>
+    <string name="label_status">Status: %1$s</string>
+    <string name="loan_info">Emprestado para: %1$s em %2$s</string>
+    <string name="external_disabled">Informações externas desativadas temporariamente</string>
+
+</resources>

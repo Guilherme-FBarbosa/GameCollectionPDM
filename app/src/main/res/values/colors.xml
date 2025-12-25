@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- Cores por Estado do Jogo -->
+    <color name="status_por_jogar">#ADD8E6</color>  <!-- Azul Claro -->
+    <color name="status_a_jogar">#FFFFE0</color>    <!-- Amarelo Claro -->
+    <color name="status_concluido">#90EE90</color>  <!-- Verde Claro -->
+    <color name="status_abandonado">#FFB6C1</color> <!-- Rosa Claro -->
+    <color name="status_emprestado">#E6E6FA</color>   <!-- Lavanda -->
+</resources>
