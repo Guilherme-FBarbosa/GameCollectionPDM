@@ -28,4 +28,9 @@
     <string name="loan_info">Emprestado para: %1$s em %2$s</string>
     <string name="external_disabled">Informações externas desativadas temporariamente</string>
 
+    <!-- Novas labels utilizadas no detalhe -->
+    <string name="label_year">Ano: %1$s</string>
+    <string name="label_format">Formato: %1$s</string>
+    <string name="label_progress">Progresso: %1$d%%</string>
+
 </resources>

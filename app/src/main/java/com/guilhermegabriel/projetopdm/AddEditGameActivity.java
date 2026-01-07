@@ -1,6 +1,7 @@
 package com.guilhermegabriel.projetopdm;
 
 import android.app.Activity;
+import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -11,6 +12,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.RadioButton;
@@ -33,7 +35,7 @@ import java.io.InputStream;
 public class AddEditGameActivity extends AppCompatActivity {
 
     // ... (variáveis de instância inalteradas)
-    private EditText etTitle, etYear, etNotes;
+    private EditText etTitle, etYear, etNotes, etCustomProgress;
     private Spinner spinnerPlatform, spinnerStatus;
     private RadioGroup rgFormat;
     private RadioButton rbPhysical, rbDigital;
@@ -45,12 +47,17 @@ public class AddEditGameActivity extends AppCompatActivity {
     private Button btnChooseImage;
     private RatingBar ratingBar;
 
+    private Button btnDateStarted, btnDateCompleted;
+
     private GamesDB gamesDB;
     private Game currentGame; // Para saber se estamos editando ou adicionando
     // borrowerName e empréstimos temporariamente desativados
 
     private static final int REQUEST_CODE_PICK_IMAGE = 101;
     private Uri selectedImageUri = null;
+
+    private Calendar pickedStartDate = null;
+    private Calendar pickedCompletedDate = null;
 
     // Track previous spinner selection (kept for UI consistency)
     private String previousStatusSelection;
@@ -87,6 +94,7 @@ public class AddEditGameActivity extends AppCompatActivity {
         etTitle = findViewById(R.id.et_title);
         etYear = findViewById(R.id.et_year);
         etNotes = findViewById(R.id.et_notes);
+        etCustomProgress = findViewById(R.id.et_custom_progress);
         spinnerPlatform = findViewById(R.id.spinner_platform);
         spinnerStatus = findViewById(R.id.spinner_status);
         rgFormat = findViewById(R.id.rg_format);
@@ -100,6 +108,9 @@ public class AddEditGameActivity extends AppCompatActivity {
         ivCoverPreview = findViewById(R.id.iv_cover_preview);
         btnChooseImage = findViewById(R.id.btn_choose_image);
         ratingBar = findViewById(R.id.rating_bar);
+
+        btnDateStarted = findViewById(R.id.btn_date_started);
+        btnDateCompleted = findViewById(R.id.btn_date_completed);
     }
 
     private void setupSpinners() {
@@ -127,21 +138,62 @@ public class AddEditGameActivity extends AppCompatActivity {
             @Override public void onStopTrackingTouch(SeekBar seekBar) { }
         });
 
+        btnDateStarted.setOnClickListener(v -> showDatePicker(true));
+        btnDateCompleted.setOnClickListener(v -> showDatePicker(false));
+
         // Temporarily disable loan prompt: simply update progress/rating visibility on status change
         spinnerStatus.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 String selectedStatus = parent.getItemAtPosition(position).toString();
                 updateProgressState(selectedStatus);
+
+                // Rating visible for all states except 'Por Jogar'
                 if ("Por Jogar".equals(selectedStatus)) {
                     ratingBar.setVisibility(View.GONE);
                 } else {
                     ratingBar.setVisibility(View.VISIBLE);
                 }
+
+                // Date buttons: start disabled when Por Jogar
+                btnDateStarted.setEnabled(!"Por Jogar".equals(selectedStatus));
+                // Completion date only allowed for Concluído or Emprestado
+                btnDateCompleted.setEnabled("Concluído".equals(selectedStatus) || "Emprestado".equals(selectedStatus));
+
+                // Custom progress only when Concluído
+                if ("Concluído".equals(selectedStatus)) {
+                    etCustomProgress.setVisibility(View.VISIBLE);
+                    // keep SeekBar disabled but show potential custom value
+                    sbProgress.setEnabled(false);
+                } else {
+                    etCustomProgress.setVisibility(View.GONE);
+                }
+
                 previousStatusSelection = selectedStatus;
             }
             @Override public void onNothingSelected(AdapterView<?> parent) { }
         });
+    }
+
+    private void showDatePicker(final boolean isStart) {
+        final Calendar c = Calendar.getInstance();
+        int year = c.get(Calendar.YEAR);
+        int month = c.get(Calendar.MONTH);
+        int day = c.get(Calendar.DAY_OF_MONTH);
+        DatePickerDialog dpd = new DatePickerDialog(this, (view, y, m, d) -> {
+            Calendar picked = Calendar.getInstance();
+            picked.set(Calendar.YEAR, y);
+            picked.set(Calendar.MONTH, m);
+            picked.set(Calendar.DAY_OF_MONTH, d);
+            if (isStart) {
+                pickedStartDate = picked;
+                btnDateStarted.setText("Início: " + (d < 10 ? "0"+d : d) + "/" + (m+1 < 10 ? "0"+(m+1) : (m+1)) + "/" + y);
+            } else {
+                pickedCompletedDate = picked;
+                btnDateCompleted.setText("Conclusão: " + (d < 10 ? "0"+d : d) + "/" + (m+1 < 10 ? "0"+(m+1) : (m+1)) + "/" + y);
+            }
+        }, year, month, day);
+        dpd.show();
     }
 
     private void chooseImage() {
@@ -185,11 +237,33 @@ public class AddEditGameActivity extends AppCompatActivity {
         gameToSave.setTitle(etTitle.getText().toString());
         gameToSave.setPlatform(spinnerPlatform.getSelectedItem().toString());
         String yearStr = etYear.getText().toString();
-        if (!TextUtils.isEmpty(yearStr)) gameToSave.setYear(Integer.parseInt(yearStr));
+        if (!TextUtils.isEmpty(yearStr)) {
+            try { gameToSave.setYear(Integer.parseInt(yearStr)); } catch (NumberFormatException ignored) { }
+        }
         int selectedFormatId = rgFormat.getCheckedRadioButtonId();
         gameToSave.setFormat(selectedFormatId == R.id.rb_physical ? "Físico" : "Digital");
         gameToSave.setStatus(newStatus);
-        gameToSave.setProgress(sbProgress.getProgress());
+
+        // Progress: priority to custom progress when Concluído
+        if ("Concluído".equals(newStatus) && etCustomProgress.getVisibility() == View.VISIBLE) {
+            String custom = etCustomProgress.getText().toString();
+            if (!TextUtils.isEmpty(custom)) {
+                try {
+                    int customVal = Integer.parseInt(custom);
+                    if (customVal < 1) customVal = 1;
+                    // allow very large values (e.g., 112%) as user said; cap at 500
+                    if (customVal > 500) customVal = 500;
+                    gameToSave.setProgress(customVal);
+                } catch (NumberFormatException nfe) {
+                    gameToSave.setProgress(sbProgress.getProgress());
+                }
+            } else {
+                gameToSave.setProgress(sbProgress.getProgress());
+            }
+        } else {
+            gameToSave.setProgress(sbProgress.getProgress());
+        }
+
         gameToSave.setNotes(etNotes.getText().toString());
 
         // Rating: only if status != Por Jogar
@@ -214,16 +288,24 @@ public class AddEditGameActivity extends AppCompatActivity {
             }
         }
 
+        // Datas: use picked dates if present, otherwise apply automatic logic
+        if (pickedStartDate != null) {
+            gameToSave.setDateStarted(pickedStartDate);
+        }
+        if (pickedCompletedDate != null) {
+            gameToSave.setDateCompleted(pickedCompletedDate);
+        }
+
         // Datas automáticas: aplicar antes de persistir alterações (considerando oldStatus)
         if (!isEditing) { // Jogo novo
-            if (newStatus.equals("A Jogar")) gameToSave.setDateStarted(Calendar.getInstance());
-            if (newStatus.equals("Concluído")) gameToSave.setDateCompleted(Calendar.getInstance());
+            if (newStatus.equals("A Jogar") && gameToSave.getDateStarted() == null) gameToSave.setDateStarted(Calendar.getInstance());
+            if (newStatus.equals("Concluído") && gameToSave.getDateCompleted() == null) gameToSave.setDateCompleted(Calendar.getInstance());
         } else { // Jogo existente
             if (newStatus.equals("A Jogar") && !oldStatus.equals("A Jogar") && gameToSave.getDateStarted() == null) {
                 gameToSave.setDateStarted(Calendar.getInstance());
             }
             if (newStatus.equals("Concluído") && !oldStatus.equals("Concluído")) {
-                gameToSave.setDateCompleted(Calendar.getInstance());
+                if (gameToSave.getDateCompleted() == null) gameToSave.setDateCompleted(Calendar.getInstance());
             }
             if (!newStatus.equals("Concluído") && oldStatus.equals("Concluído")) {
                 gameToSave.setDateCompleted(null);
@@ -332,6 +414,28 @@ public class AddEditGameActivity extends AppCompatActivity {
                     } catch (Exception ignored) { }
                 }).start();
             }
+        }
+
+        // Dates
+        if (currentGame.getDateStarted() != null) {
+            pickedStartDate = currentGame.getDateStarted();
+            int d = pickedStartDate.get(Calendar.DAY_OF_MONTH);
+            int m = pickedStartDate.get(Calendar.MONTH);
+            int y = pickedStartDate.get(Calendar.YEAR);
+            btnDateStarted.setText("Início: " + (d < 10 ? "0"+d : d) + "/" + (m+1 < 10 ? "0"+(m+1) : (m+1)) + "/" + y);
+        }
+        if (currentGame.getDateCompleted() != null) {
+            pickedCompletedDate = currentGame.getDateCompleted();
+            int d = pickedCompletedDate.get(Calendar.DAY_OF_MONTH);
+            int m = pickedCompletedDate.get(Calendar.MONTH);
+            int y = pickedCompletedDate.get(Calendar.YEAR);
+            btnDateCompleted.setText("Conclusão: " + (d < 10 ? "0"+d : d) + "/" + (m+1 < 10 ? "0"+(m+1) : (m+1)) + "/" + y);
+        }
+
+        // Custom progress: show if >100 or if status Concluído and progress not equal 100
+        if ("Concluído".equals(currentGame.getStatus()) && currentGame.getProgress() != 100) {
+            etCustomProgress.setVisibility(View.VISIBLE);
+            etCustomProgress.setText(String.valueOf(currentGame.getProgress()));
         }
     }
 

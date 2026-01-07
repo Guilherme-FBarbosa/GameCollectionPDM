@@ -1,7 +1,30 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
+<resources>
     <!-- Base application theme. -->
     <style name="Base.Theme.ProjetoPDM" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+        <!-- Tema escuro: toolbar bem escura + texto/ícones claros -->
+        <item name="colorPrimary">#121212</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">#1E1E1E</item>
+        <item name="colorOnPrimaryContainer">@color/white</item>
+
+        <!-- Superfícies (menus, dialogs) no modo escuro -->
+        <item name="colorSurface">@color/dark_popup_bg</item>
+        <item name="colorOnSurface">@color/dark_popup_text</item>
+        <item name="colorSurfaceContainer">@color/dark_popup_bg</item>
+        <item name="colorSurfaceContainerHigh">@color/dark_popup_bg</item>
+
+        <!-- Cor de ações (botões OK/Cancelar/etc) -->
+        <item name="colorSecondary">@color/dark_action_blue</item>
+        <item name="colorOnSecondary">@color/black</item>
+
+        <!-- Popups do AppCompat (overflow menu) -->
+        <item name="android:popupBackground">@color/dark_popup_bg</item>
+
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">?attr/colorPrimary</item>
+        <item name="android:windowFullscreen">false</item>
+
+        <!-- AlertDialog (AppCompat) -->
+        <item name="alertDialogTheme">@style/ThemeOverlay.ProjetoPDM.Dark.AlertDialog</item>
     </style>
 </resources>

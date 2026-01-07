@@ -124,6 +124,18 @@ public class GameAdapter extends ArrayAdapter<Game> {
                 default:                colorId = android.R.color.transparent; break;
             }
             convertView.setBackgroundColor(ContextCompat.getColor(mContext, colorId));
+
+            // Contraste do texto: no modo escuro (night) os fundos dos status são escuros, então texto branco.
+            // No modo claro, fundos são claros, então texto preto.
+            int nightMode = mContext.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
+            int textColor = (nightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES)
+                    ? ContextCompat.getColor(mContext, R.color.white)
+                    : ContextCompat.getColor(mContext, R.color.black);
+
+            tvGameTitle.setTextColor(textColor);
+            tvPlatformFormat.setTextColor(textColor);
+            tvStatusProgress.setTextColor(textColor);
+            tvRatingDate.setTextColor(textColor);
         }
 
         return convertView;

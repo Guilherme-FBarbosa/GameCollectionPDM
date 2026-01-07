@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- No modo escuro, cores de fundo por estado devem ficar mais escuras (para textos claros) -->
+    <color name="status_por_jogar">#0F2A3A</color>
+    <color name="status_a_jogar">#3A2F0F</color>
+    <color name="status_concluido">#12351A</color>
+    <color name="status_abandonado">#3A0F1E</color>
+    <color name="status_emprestado">#20203A</color>
+
+    <!-- Acessibilidade/contraste no tema escuro -->
+    <color name="dark_popup_bg">#2A2A2A</color>
+    <color name="dark_popup_text">#EDEDED</color>
+    <color name="dark_action_blue">#6EB6FF</color>
+</resources>

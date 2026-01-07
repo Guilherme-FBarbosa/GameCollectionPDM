@@ -1,8 +1,16 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
     <style name="Base.Theme.ProjetoPDM" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <!-- Garantir que a status bar não fique transparente e que a janela não seja fullscreen -->
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">?attr/colorPrimary</item>
+        <item name="android:windowFullscreen">false</item>
+
+        <!-- Tema claro: toolbar azul escuro + ícones/texto brancos -->
+        <item name="colorPrimary">#0D47A1</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">#1565C0</item>
+        <item name="colorOnPrimaryContainer">@color/white</item>
     </style>
 
     <style name="Theme.ProjetoPDM" parent="Base.Theme.ProjetoPDM" />

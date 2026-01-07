@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -13,7 +14,11 @@ import android.widget.ListView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
@@ -30,6 +35,9 @@ public class MainActivity extends AppCompatActivity {
     private final ArrayList<String> activePlatformFilters = new ArrayList<>();
     private final ArrayList<String> activeStatusFilters = new ArrayList<>();
 
+    // Pesquisa por título (aplicada em memória por cima dos filtros atuais)
+    private String currentQuery = "";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -37,10 +45,28 @@ public class MainActivity extends AppCompatActivity {
 
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        // Garantir que o título do app seja mostrado no Toolbar (restaura o nome do projeto)
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayShowTitleEnabled(true);
+            toolbar.setTitle(R.string.app_name);
+        }
 
         lvGames = findViewById(R.id.lv_games);
         FloatingActionButton fabAddGame = findViewById(R.id.fab_add_game);
         gamesDB = new GamesDB(this);
+
+        // Guardar valores base (para não acumular padding/margins quando insets re-aplicarem)
+        final int baseListPaddingBottom = lvGames.getPaddingBottom();
+        final int baseAppBarPaddingTop = findViewById(R.id.appbar).getPaddingTop();
+        final int baseFabMarginBottom;
+        {
+            ViewGroup.LayoutParams lp = fabAddGame.getLayoutParams();
+            if (lp instanceof ViewGroup.MarginLayoutParams) {
+                baseFabMarginBottom = ((ViewGroup.MarginLayoutParams) lp).bottomMargin;
+            } else {
+                baseFabMarginBottom = 0;
+            }
+        }
 
         fabAddGame.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, AddEditGameActivity.class);
@@ -62,6 +88,31 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
+        View root = findViewById(R.id.main);
+        View appBar = findViewById(R.id.appbar);
+        View listView = findViewById(R.id.lv_games);
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
+            Insets sysBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            // Top inset: aplica somente uma vez (como base + sysBars.top). Sem fitsSystemWindows no XML.
+            if (appBar != null) {
+                appBar.setPadding(appBar.getPaddingLeft(), baseAppBarPaddingTop + sysBars.top, appBar.getPaddingRight(), appBar.getPaddingBottom());
+            }
+
+            // Bottom inset: aplica no conteúdo rolável sem acumular
+            if (listView != null) {
+                listView.setPadding(listView.getPaddingLeft(), listView.getPaddingTop(), listView.getPaddingRight(), baseListPaddingBottom + sysBars.bottom);
+            }
+
+            // Move o FAB para cima da navbar (dinâmico)
+            ViewGroup.LayoutParams lp = fabAddGame.getLayoutParams();
+            if (lp instanceof ViewGroup.MarginLayoutParams) {
+                ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) lp;
+                mlp.bottomMargin = baseFabMarginBottom + sysBars.bottom;
+                fabAddGame.setLayoutParams(mlp);
+            }
+             return insets;
+         });
+
         loadGames(null, null);
     }
     
@@ -73,12 +124,25 @@ public class MainActivity extends AppCompatActivity {
             loadedGames = gamesDB.getGamesWithFilters(platformFilters, statusFilters);
         }
 
+        // aplica pesquisa por nome em memória
+        ArrayList<Game> filteredByQuery = new ArrayList<>();
+        if (currentQuery == null || currentQuery.trim().isEmpty()) {
+            filteredByQuery = loadedGames;
+        } else {
+            String q = currentQuery.toLowerCase();
+            for (Game g : loadedGames) {
+                if (g != null && g.getTitle() != null && g.getTitle().toLowerCase().contains(q)) {
+                    filteredByQuery.add(g);
+                }
+            }
+        }
+
         if (gameAdapter == null) {
-            gameAdapter = new GameAdapter(this, R.layout.list_item_game, loadedGames);
+            gameAdapter = new GameAdapter(this, R.layout.list_item_game, filteredByQuery);
             lvGames.setAdapter(gameAdapter);
         } else {
             gameAdapter.clear();
-            gameAdapter.addAll(loadedGames);
+            gameAdapter.addAll(filteredByQuery);
             gameAdapter.notifyDataSetChanged();
         }
     }
@@ -86,6 +150,39 @@ public class MainActivity extends AppCompatActivity {
      @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.main_menu, menu);
+
+        // Configurar SearchView (lupa) para procurar por nome
+        MenuItem searchItem = menu.findItem(R.id.action_search);
+        if (searchItem != null) {
+            View actionView = searchItem.getActionView();
+            if (actionView instanceof SearchView) {
+                SearchView searchView = (SearchView) actionView;
+                searchView.setQueryHint("Procurar jogo...");
+
+                searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+                    @Override
+                    public boolean onQueryTextSubmit(String query) {
+                        currentQuery = query;
+                        loadGames(activePlatformFilters, activeStatusFilters);
+                        return true;
+                    }
+
+                    @Override
+                    public boolean onQueryTextChange(String newText) {
+                        currentQuery = newText;
+                        loadGames(activePlatformFilters, activeStatusFilters);
+                        return true;
+                    }
+                });
+
+                searchView.setOnCloseListener(() -> {
+                    currentQuery = "";
+                    loadGames(activePlatformFilters, activeStatusFilters);
+                    return false;
+                });
+            }
+        }
+
         return true;
     }
 
@@ -96,7 +193,11 @@ public class MainActivity extends AppCompatActivity {
             showSortDialog();
             return true;
         } else if (itemId == R.id.action_filter) {
+            // agora o action_filter é o ícone de funil/cone
             showFilterDialog();
+            return true;
+        } else if (itemId == R.id.action_stats) {
+            startActivity(new Intent(MainActivity.this, StatsActivity.class));
             return true;
         } else if (itemId == R.id.action_about) {
             showAboutDialog();

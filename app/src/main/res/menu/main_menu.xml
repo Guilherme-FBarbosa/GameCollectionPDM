@@ -8,11 +8,20 @@
         android:title="Ordenar"
         app:showAsAction="ifRoom" />
 
+    <!-- Novo: filtro (funil/cone) para abrir o diálogo de filtros -->
     <item
         android:id="@+id/action_filter"
-        android:icon="@android:drawable/ic_menu_search"
+        android:icon="@android:drawable/ic_menu_manage"
         android:title="Filtrar"
         app:showAsAction="ifRoom" />
+
+    <!-- Novo: lupa vira pesquisa por nome -->
+    <item
+        android:id="@+id/action_search"
+        android:icon="@android:drawable/ic_menu_search"
+        android:title="Procurar"
+        app:showAsAction="ifRoom|collapseActionView"
+        app:actionViewClass="androidx.appcompat.widget.SearchView" />
 
     <item
         android:id="@+id/action_stats"
